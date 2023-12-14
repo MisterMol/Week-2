@@ -1,22 +1,23 @@
 #!/bin/bash
-# Maak een back-up van de originele configuratiebestanden
+# Backup the original configuration files
 cp /etc/apache2/apache2.conf /etc/apache2/apache2.conf.backup
 cp /etc/apache2/conf-available/security.conf /etc/apache2/conf-available/security.conf.backup
-# Zet ServerTokens en ServerSignature op minimaal
-sed -i '/^ServerTokens/s/.*/ServerTokens Prod/' /etc/apache2/apache2.conf
-sed -i '/^ServerSignature/s/.*/ServerSignature Off/' /etc/apache2/apache2.conf
-# Activeer mod_security en mod_evasive
+# Set ServerTokens and ServerSignature to minimal
+sed -i 's/^ServerTokens.*/ServerTokens Prod/' /etc/apache2/apache2.conf
+sed -i 's/^ServerSignature.*/ServerSignature Off/' /etc/apache2/apache2.conf
+# Enable mod_security and mod_evasive
 sudo a2enmod security2 evasive
-# Configureer beveiligingsheaders
+# Configure security headers
 echo "Header always set X-Frame-Options DENY" >> /etc/apache2/apache2.conf
 echo "Header always set X-XSS-Protection \"1; mode=block\"" >> /etc/apache2/apache2.conf
 echo "Header always set X-Content-Type-Options nosniff" >> /etc/apache2/apache2.conf
-echo "Header always set Referrer-Policy \"no-referrer-when-downgrade\"" >> /etc/apache2/apache2.conf
-# Schakel directorylijsten uit
+echo "Header always set Referrer-Policy \"no-referrer-when-downgrade\"" >>
+/etc/apache2/apache2.conf
+# Disable directory listing
 echo "Options -Indexes" > /var/www/html/.htaccess
-# Beperk toegang tot gevoelige bestanden
+# Restrict access to sensitive files
 echo "<FilesMatch \"(\\.htaccess|\\.htpasswd|config\\.php)\">" >> /etc/apache2/apache2.conf
 echo " Require all denied" >> /etc/apache2/apache2.conf
 echo "</FilesMatch>" >> /etc/apache2/apache2.conf
-# Herstart Apache na het aanbrengen van wijzigingen
-sudo systemctl restart apache2
+# Restart Apache after making changes
+sudo systemctl restart apache2 

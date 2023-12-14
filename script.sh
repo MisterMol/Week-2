@@ -1,62 +1,68 @@
 #!/bin/bash
 
-# Verwijder Server Version Banner
-echo "ServerTokens Prod" >> /opt/apache/conf/httpd.conf
-echo "ServerSignature Off" >> /opt/apache/conf/httpd.conf
+# Remove Server Version Banner
+echo "ServerTokens Prod" | sudo tee -a /etc/apache2/conf-available/security.conf
+echo "ServerSignature Off" | sudo tee -a /etc/apache2/conf-available/security.conf
+sudo a2enconf security
+sudo systemctl restart apache2
 
-# Schakel directorylijst uit
-echo "<Directory /opt/apache/htdocs>" >> /opt/apache/conf/httpd.conf
-echo "Options -Indexes" >> /opt/apache/conf/httpd.conf
-echo "</Directory>" >> /opt/apache/conf/httpd.conf
+# Disable directory browser listing
+sudo sed -i 's/Options Indexes/Options -Indexes/g' /etc/apache2/apache2.conf
+sudo systemctl restart apache2
 
-# Etag uitschakelen
-echo "FileETag None" >> /opt/apache/conf/httpd.conf
+# Configure ETag
+echo "FileETag None" | sudo tee -a /etc/apache2/conf-available/security.conf
+sudo systemctl restart apache2
 
-# Voer Apache uit vanuit een niet-privé-account
-groupadd apache
-useradd -g apache apache
-chown -R apache:apache /opt/apache
-sed -i 's/User daemon/User apache/' /opt/apache/conf/httpd.conf
-sed -i 's/Group daemon/Group apache/' /opt/apache/conf/httpd.conf
+# Run Apache from a non-privileged account
+sudo groupadd apache
+sudo useradd -g apache apache
+sudo chown -R apache:apache /etc/apache2/
+sudo sed -i 's/User www-data/User apache/g' /etc/apache2/apache2.conf
+sudo sed -i 's/Group www-data/Group apache/g' /etc/apache2/apache2.conf
+sudo systemctl restart apache2
 
-# Bescherm rechten van bin en conf mappen
-chmod -R 750 /opt/apache/bin /opt/apache/conf
+# Protect binary and configuration directory permission
+sudo chmod -R 750 /etc/apache2/{bin,conf}
 
-# Schakel AllowOverride uit
-sed -i '/<Directory \/>/,/<\/Directory>/ s/AllowOverride All/AllowOverride None/' /opt/apache/conf/httpd.conf
+# System Settings Protection
+sudo sed -i '/<Directory \/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride None\nOptions -Indexes/' /etc/apache2/apache2.conf
+sudo systemctl restart apache2
 
-# Beperk HTTP Request Methods
-echo "<LimitExcept GET POST HEAD>" >> /opt/apache/conf/httpd.conf
-echo "deny from all" >> /opt/apache/conf/httpd.conf
-echo "</LimitExcept>" >> /opt/apache/conf/httpd.conf
+# HTTP Request Methods
+echo "<LimitExcept GET POST HEAD>
+deny from all
+</LimitExcept>" | sudo tee -a /etc/apache2/apache2.conf
+sudo systemctl restart apache2
 
-# Schakel Trace HTTP Request uit
-echo "TraceEnable off" >> /opt/apache/conf/httpd.conf
+# Disable Trace HTTP Request
+echo "TraceEnable off" | sudo tee -a /etc/apache2/apache2.conf
+sudo systemctl restart apache2
 
-# Zet cookie met HttpOnly en Secure vlag
-echo "Header edit Set-Cookie ^(.*)$ $1;HttpOnly;Secure" >> /opt/apache/conf/httpd.conf
+# Set cookie with HttpOnly and Secure flag
+echo "Header edit Set-Cookie ^(.*)$ $1;HttpOnly;Secure" | sudo tee -a /etc/apache2/apache2.conf
+sudo systemctl restart apache2
 
-# Beveilig tegen Clickjacking-aanvallen
-echo "Header always append X-Frame-Options SAMEORIGIN" >> /opt/apache/conf/httpd.conf
+# Clickjacking Attack
+echo "Header always append X-Frame-Options SAMEORIGIN" | sudo tee -a /etc/apache2/apache2.conf
+sudo systemctl restart apache2
 
-# Schakel Server Side Includes uit
-sed -i 's/Options Includes/Options -Includes/' /opt/apache/conf/httpd.conf
+# Disable HTTP 1.0 Protocol
+echo "RewriteEngine On
+RewriteCond %{THE_REQUEST} !HTTP/1.1$
+RewriteRule .* - [F]" | sudo tee -a /etc/apache2/apache2.conf
+sudo systemctl restart apache2
 
-# Voeg X-XSS Protection toe
-echo "Header set X-XSS-Protection \"1; mode=block\"" >> /opt/apache/conf/httpd.conf
+# Timeout value configuration
+echo "Timeout 60" | sudo tee -a /etc/apache2/apache2.conf
+sudo systemctl restart apache2
 
-# Schakel HTTP 1.0 Protocol uit
-echo "RewriteEngine On" >> /opt/apache/conf/httpd.conf
-echo "RewriteCond %{THE_REQUEST} !HTTP/1.1$" >> /opt/apache/conf/httpd.conf
-echo "RewriteRule .* - [F]" >> /opt/apache/conf/httpd.conf
+# SSL Configuration (if applicable)
+# Modify SSL configuration as per requirements
+# ...
 
-# Configureer SSL
-# (Vereist SSL-certificaten en configuratie)
+# Mod Security (if applicable)
+# Install and configure Mod Security as needed
+# ...
 
-# Implementeer Mod Security
-# (Vereist installatie en configuratie van Mod Security)
-
-# Voer het commando uit om Apache opnieuw te starten
-systemctl restart apache2  # Of het relevante opdracht voor jouw systeem om Apache te herstarten
-
-echo "Beveiligingsinstellingen toegepast op Apache-server."
+echo "Apache server secured!"
